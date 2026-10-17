@@ -1,4 +1,4 @@
-# AirMouse
+# AirMouse :mouse2:
 
 AirMouse is developed as part of the project component of the **Mobile Systems** course at **AGH University of Krakow**.
 
@@ -13,6 +13,10 @@ AirMouse uses the phone's gyroscope and accelerometer to track its orientation a
 The key design assumption is that as much logic as possible runs in the mobile app: sensor data processing, cursor movement calculation, gesture recognition and mapping gestures to specific actions. The desktop app is intentionally kept minimal – it only receives ready-made commands (movement, click, scroll, system action) and executes them. This keeps the desktop app simple and makes it possible to support other operating systems or a Bluetooth HID mode without rewriting the core logic.
 
 We also want to enrich the app with cool gesture-based features and haptic feedback to make it more fun and more useful in everyday use, especially during events such as stand-ups, daily meetings or presentations.
+
+<p align="center">
+  <img src="docs/images/latajaca-polatucha.jpg" alt="AirMouse demo" width="50%">
+</p>
 
 ## Project variants
 
@@ -76,12 +80,11 @@ The desktop app code will be either part of this repository or kept in a separat
 - Transport: **UDP** over a local Wi-Fi network
 - The message format and the details of the communication protocol have not been decided yet and will be described here once established.
 
-## Team
+## Team :technologist: :technologist:
 
 - Stanisław Barycki
 - Krzysztof Swędzioł
 
-
 ---
 
-*This README will be updated as the project evolves and open decisions are made.*
+_This README will be updated as the project evolves and open decisions are made._
