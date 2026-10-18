@@ -1,0 +1,19 @@
+name: Ticket
+description: A single task
+projects: ["Jeremylaby/2"]
+labels: ["Ticket"]
+body:
+  - type: textarea
+    id: user-story
+    attributes:
+      label: User Story
+      description: What we want to do and why. Add useful links (technical/UI designs, research results).
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance Criteria
+      description: Only the non-obvious stuff. Can be left blank.
+    validations:
+      required: false
