@@ -17,11 +17,11 @@ jobs:
             const issue = context.payload.issue;
             if (issue.labels.some((label) => label.name === "Epic")) return;
             const prefix = `[AM-${issue.number}]`;
-            // Skip if the prefix is already there, e.g. issue reopened or recreated by hand
+            // Skip if someone already added the prefix by hand
             if (issue.title.startsWith(prefix)) return;
             await github.rest.issues.update({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: issue.number,
-              title: `[${prefix}] ${issue.title}`,
+              title: `${prefix} ${issue.title}`,
             });
