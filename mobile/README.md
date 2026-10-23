@@ -2,13 +2,22 @@
 
 ## Setting up for the first time
 
-Requires Node.js `24.13.1` (pinned in [`.tool-versions`](../.tool-versions); with asdf just run `asdf install`).
+Requires Node.js `24.13.1` and Java `17` (pinned in [`.tool-versions`](../.tool-versions); with asdf just run `asdf install`), plus Android Studio (Android) and Xcode with CocoaPods (iOS).
 
 ```sh
 cd mobile
 npm install
-npm start
 ```
+
+## Running
+
+```sh
+npm run android   # build & run debug app on Android emulator/device
+npm run ios       # build & run debug app on iOS simulator
+npm start         # start Metro only (app already installed)
+```
+
+Native rebuild (`npm run android` / `npm run ios`) is only needed after adding a native library or changing `app.json`; otherwise `npm start` is enough.
 
 ## Custom npm registry
 
