@@ -99,4 +99,25 @@ Since every commit lands on `main`, keep them clean:
 - Keep messages short.
 - Before opening a PR, squash "wip" and "fix typo" commits into meaningful ones (`git rebase -i`).
 
+### Fixup commits
+
+The easiest way to avoid "fix typo" commits is a fixup. When you fix something in an earlier commit on your branch, stage the fix and run:
+
+```sh
+git commit --fixup <hash>
+```
+
+This creates a normal commit named `fixup! <title of that commit>`. Nothing is changed or merged yet. It's just a note that this commit belongs to the other one.
+
+Right before opening a PR (and again after fixes from review), squash them:
+
+```sh
+git fetch origin
+git rebase -i --autosquash origin/main
+```
+
+The rebase only rewrites your current branch, `main` stays untouched. `origin/main` is just the reference point: Git takes the commits that are on your branch but not on `main`, merges each `fixup!` commit into the commit it belongs to, and puts the result on top of the latest `main`. In the editor that opens, just save and close.
+
+If the branch was already pushed, push it with `git push --force-with-lease`. Only do this on your own branch, never on `main` or an epic branch. For sub-issues of an epic, use the epic branch as the base instead of `origin/main`.
+
 Ask Stanisław Barycki if there's already a git hook that automatically adds the branch name in `[]` to the commit message.
