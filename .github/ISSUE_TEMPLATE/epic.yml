@@ -1,6 +1,6 @@
 name: Epic
 description: A bigger piece of work split into tickets
-labels: ["Epic"]
+labels: ["Epic", "mobile"]
 projects: ["Jeremylaby/2"]
 body:
   - type: markdown
