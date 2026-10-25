@@ -19,6 +19,22 @@ npm start         # start Metro only (app already installed)
 
 Native rebuild (`npm run android` / `npm run ios`) is only needed after adding a native library or changing `app.json`; otherwise `npm start` is enough.
 
+## Linting and formatting
+
+The project uses [ESLint](https://eslint.org) (`eslint.config.js`, based on `eslint-config-expo`) and [Prettier](https://prettier.io) (`.prettierrc`).
+
+```sh
+npm run check         # lint + format check (run before committing)
+npm run fix           # auto-fix lint issues and format all files
+
+npm run lint          # lint only
+npm run lint:fix      # lint and auto-fix
+npm run format        # format all files
+npm run format:check  # check formatting without writing
+```
+
+Import from `src/` using the `@/` alias (e.g. `import App from '@/App'`). Relative parent imports (`../`) are blocked by ESLint.
+
 ## Custom npm registry
 
 If your global `~/.npmrc` points to a company registry, you can use [direnv](https://direnv.net) to switch to the public npm registry only inside your study directory:
