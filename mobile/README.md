@@ -24,13 +24,14 @@ Native rebuild (`npm run android` / `npm run ios`) is only needed after adding a
 The project uses [ESLint](https://eslint.org) (`eslint.config.js`, based on `eslint-config-expo`) and [Prettier](https://prettier.io) (`.prettierrc`).
 
 ```sh
-npm run check         # lint + format check (run before committing)
+npm run check         # lint + format check + typecheck (run before committing)
 npm run fix           # auto-fix lint issues and format all files
 
 npm run lint          # lint only
 npm run lint:fix      # lint and auto-fix
 npm run format        # format all files
 npm run format:check  # check formatting without writing
+npm run typecheck     # TypeScript type check
 ```
 
 Import from `src/` using the `@/` alias (e.g. `import App from '@/App'`). Relative parent imports (`../`) are blocked by ESLint.
