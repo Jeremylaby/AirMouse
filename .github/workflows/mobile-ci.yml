@@ -1,0 +1,138 @@
+name: Mobile CI
+
+# Runs on PRs to any branch, so epic branches are checked too.
+# No `paths:` filter here on purpose. A path-filtered workflow never runs on
+# docs/desktop-only PRs, so a required check would stay "Expected" forever and
+# block the merge. Instead, the `changes` job decides and the jobs get skipped.
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: read # dorny/paths-filter lists PR files through the API
+
+concurrency:
+  group: mobile-ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    name: Detect mobile changes
+    runs-on: ubuntu-latest
+    outputs:
+      mobile: ${{ steps.filter.outputs.mobile == 'true' || steps.filter.outputs.workflow == 'true' }}
+    steps:
+      # No checkout needed: on pull_request the filter reads changed files from the API.
+      - id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          # With 'every', a file counts only if it matches all patterns in a filter,
+          # which is what makes the `!` exclusion work. The default 'some' would
+          # treat the exclusion as "any file that isn't Markdown".
+          predicate-quantifier: every
+          filters: |
+            mobile:
+              - 'mobile/**'
+              - '!**/*.md'
+            workflow:
+              - '.github/workflows/mobile-ci.yml'
+
+  checks:
+    name: Lint, format and types
+    needs: changes
+    if: needs.changes.outputs.mobile == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .tool-versions
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm run typecheck
+
+  build-android:
+    name: Build Android
+    needs: [changes, checks]
+    if: needs.changes.outputs.mobile == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .tool-versions
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - run: npm ci
+      # Native folders are generated from app.json (Continuous Native Generation).
+      - run: npx expo prebuild --platform android --no-install
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+      - working-directory: mobile/android
+        run: ./gradlew assembleDebug
+
+  build-ios:
+    name: Build iOS
+    needs: [changes, checks]
+    if: needs.changes.outputs.mobile == 'true'
+    # Expo's ExpoModulesJSI needs Swift 6.2+ (Xcode 26+). Pinned instead of
+    # macos-latest, so an image update doesn't change Xcode under us.
+    runs-on: macos-26
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .tool-versions
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - run: npm ci
+      - run: npx expo prebuild --platform ios --no-install
+      - uses: actions/cache@v4
+        with:
+          path: mobile/ios/Pods
+          # A stale restore is fine: `pod install` below brings Pods up to date.
+          key: pods-${{ runner.os }}-${{ hashFiles('mobile/package-lock.json', 'mobile/app.json', 'mobile/app.config.*', 'mobile/plugins/**') }}
+          restore-keys: pods-${{ runner.os }}-
+      - working-directory: mobile/ios
+        run: pod install
+      - working-directory: mobile/ios
+        run: |
+          WORKSPACE=$(ls -d *.xcworkspace | head -n 1)
+          SCHEME=$(basename "$WORKSPACE" .xcworkspace)
+          xcodebuild \
+            -workspace "$WORKSPACE" \
+            -scheme "$SCHEME" \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+  # The only check to mark as required in branch protection. Skipped jobs count
+  # as passed, so PRs without mobile changes can still be merged.
+  result:
+    name: Mobile CI result
+    needs: [changes, checks, build-android, build-ios]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1
