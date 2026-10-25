@@ -25,6 +25,18 @@ module.exports = defineConfig([
       'no-console': 'warn',
       'prefer-const': 'error',
       'no-var': 'error',
+
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['../*'],
+              message: 'Use the @/ alias instead of relative parent imports.',
+            },
+          ],
+        },
+      ],
     },
   },
   {
