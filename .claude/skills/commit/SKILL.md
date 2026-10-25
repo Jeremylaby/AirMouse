@@ -35,8 +35,10 @@ Fix to earlier commit on this branch → `git commit --fixup <hash>`, not "wip"/
 ## Steps
 
 1. Get the prefix from the branch name.
-2. Look at `git status` and `git diff --staged`. Stage relevant files if nothing is staged; never stage secrets or generated dirs (`mobile/ios`, `mobile/android`).
-3. If the changes are unrelated, propose splitting them into separate commits.
+2. Look at `git status` and `git diff --staged`.
+   - **Something is staged** → commit only the staged changes and write the message for them. Don't stage anything else; leave unstaged and untracked files as they are (you may mention them).
+   - **Nothing is staged** → stage the relevant files yourself; never stage secrets or generated dirs (`mobile/ios`, `mobile/android`).
+3. If the changes are unrelated, propose splitting them into separate commits (if the user staged them, ask before changing what's staged).
 4. Decide: fixup of an earlier branch commit, or a new commit.
 5. Commit and show the result (`git log -1 --oneline`).
 
