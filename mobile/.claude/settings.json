@@ -2,7 +2,7 @@
   "enabledPlugins": {
     "expo@claude-plugins-official": true
   },
-    "attribution": {
+  "attribution": {
     "commit": "",
     "pr": "",
     "sessionUrl": false
