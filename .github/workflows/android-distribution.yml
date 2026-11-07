@@ -79,7 +79,8 @@ jobs:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-key.json
           FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID_ANDROID }}
           # Passed via env to avoid script injection from commit messages and PR titles
-          PR_NOTES: ${{ github.event.pull_request && format('PR #{0}: {1}', github.event.pull_request.number, github.event.pull_request.title) || '' }}
+          # Quoted, because an unquoted " #" starts a YAML comment
+          PR_NOTES: "${{ github.event.pull_request && format('PR #{0}: {1}', github.event.pull_request.number, github.event.pull_request.title) || '' }}"
           COMMIT_NOTES: ${{ github.event.head_commit.message || format('Manual build from {0} ({1})', github.ref_name, github.sha) }}
         run: |
           npx --yes firebase-tools@15.35.0 appdistribution:distribute \
