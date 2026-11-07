@@ -52,4 +52,3 @@ To check it: `npm config get registry` should print `https://registry.npmjs.org/
 ## Testing on mobile devices
 
 See [Testing on Devices](../docs/Testing%20on%20Devices.md) for step-by-step instructions for Android and iOS.
-
