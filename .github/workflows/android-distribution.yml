@@ -1,0 +1,66 @@
+name: Android – Firebase App Distribution
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-distribution
+  cancel-in-progress: true
+
+jobs:
+  build-and-distribute:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .tool-versions
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      # setup-java can't read asdf's `openjdk-17.0.2` from .tool-versions, so the major version is pinned here.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - run: npm ci
+
+      # Native folders are generated from app.json (Continuous Native Generation).
+      - run: npx expo prebuild --platform android --clean
+
+      # Release build embeds the JS bundle, so testers don't need Metro.
+      # Signed with the template's debug.keystore, which is fine for internal testing only.
+      - run: ./gradlew assembleRelease
+        working-directory: mobile/android
+
+      # Passed via env, so quotes in the key can't break the shell command.
+      - name: Write service account key
+        env:
+          FIREBASE_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: printf '%s' "$FIREBASE_KEY" > "$RUNNER_TEMP/firebase-key.json"
+
+      - name: Distribute to testers
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-key.json
+          # Passed via env to avoid script injection from commit messages
+          RELEASE_NOTES: ${{ github.event.head_commit.message || format('Manual build from {0} ({1})', github.ref_name, github.sha) }}
+          FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID_ANDROID }}
+        run: |
+          npx --yes firebase-tools@15.35.0 appdistribution:distribute \
+            android/app/build/outputs/apk/release/app-release.apk \
+            --app "$FIREBASE_APP_ID" \
+            --groups testers-android \
+            --release-notes "$RELEASE_NOTES"
