@@ -1,0 +1,90 @@
+name: Android – Firebase App Distribution
+
+# - push to main: distributes automatically, but only when mobile code changed
+# - pull_request: waits for manual approval ("Review deployments") before it runs
+# - workflow_dispatch: manual run from the Actions tab, on any branch
+#
+# Native `paths:` filters are fine here (unlike in mobile-ci.yml), because this
+# workflow is not a required check, so a skipped run can't block a merge.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "mobile/**"
+      - "!mobile/**/*.md"
+      - ".github/workflows/android-distribution.yml"
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "mobile/**"
+      - "!mobile/**/*.md"
+      - ".github/workflows/android-distribution.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-distribution-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-distribute:
+    # The environment needs "Required reviewers" set in Settings > Environments,
+    # otherwise PR runs start without waiting for approval.
+    environment: ${{ github.event_name == 'pull_request' && 'firebase-distribution' || '' }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # On PRs, build the branch itself, not the default merge preview with main
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .tool-versions
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      # setup-java can't read asdf's `openjdk-17.0.2` from .tool-versions, so the major version is pinned here.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - run: npm ci
+
+      # Native folders are generated from app.json (Continuous Native Generation).
+      - run: npx expo prebuild --platform android --clean
+
+      # Release build embeds the JS bundle, so testers don't need Metro.
+      # Signed with the template's debug.keystore, which is fine for internal testing only.
+      - run: ./gradlew assembleRelease
+        working-directory: mobile/android
+
+      # Passed via env, so quotes in the key can't break the shell command.
+      - name: Write service account key
+        env:
+          FIREBASE_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: printf '%s' "$FIREBASE_KEY" > "$RUNNER_TEMP/firebase-key.json"
+
+      - name: Distribute to testers
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-key.json
+          FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID_ANDROID }}
+          # Passed via env to avoid script injection from commit messages and PR titles
+          # Quoted, because an unquoted " #" starts a YAML comment
+          PR_NOTES: "${{ github.event.pull_request && format('PR #{0}: {1}', github.event.pull_request.number, github.event.pull_request.title) || '' }}"
+          COMMIT_NOTES: ${{ github.event.head_commit.message || format('Manual build from {0} ({1})', github.ref_name, github.sha) }}
+        run: |
+          npx --yes firebase-tools@15.35.0 appdistribution:distribute \
+            android/app/build/outputs/apk/release/app-release.apk \
+            --app "$FIREBASE_APP_ID" \
+            --groups testers-android \
+            --release-notes "${PR_NOTES:-$COMMIT_NOTES}"
