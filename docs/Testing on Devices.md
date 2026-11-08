@@ -2,8 +2,19 @@
 
 Testing on emulators is basically useless for our app (no real motion sensors), so we test on real devices.
 
+## Testing rules
+
 - Krzysztof Swędziął is responsible for iOS
 - Stanisław Barycki is responsible for Android
+
+Tickets in **In Review** that bring major changes to the app have to be tested on real devices before they move to **OK**. Small changes (docs, refactors without behavior changes, CI tweaks) don't need it.
+
+- **iOS** – built from Xcode straight to an iPhone (see [iOS](#ios)).
+- **Android** – a local build (see [Android](#android)), or the app sent to Android testers (Stanisław Barycki) through Firebase App Distribution by running the workflow on the PR (see [Firebase App Distribution](#firebase-app-distribution-android)).
+
+There is no pipeline for iOS yet. Distributing iOS builds (TestFlight or Firebase) requires a paid Apple Developer Program account. We may be able to get one through AGH, but we're skipping this for now and will come back to it later.
+
+All credentials (Firebase service account, app IDs) are stored in GitHub Secrets, never in the repo. Tester emails live only in the Firebase tester group.
 
 All commands below are run from the `mobile/` directory. Finish the setup from [`mobile/README.md`](../mobile/README.md) first.
 
@@ -100,6 +111,10 @@ and open the app on the phone.
 
 - `unauthorized` in `adb devices` – unplug the phone, run `adb kill-server`, plug it back and accept the prompt.
 - App shows "Unable to load script" / can't connect to Metro – check that Metro is running and run `adb reverse tcp:8081 tcp:8081` again.
+
+## Firebase App Distribution (Android)
+
+The [`android-distribution.yml`](../.github/workflows/android-distribution.yml) workflow builds a release APK and sends it to Android testers through Firebase App Distribution, so the app can be tested without building it locally. It runs automatically after merging `mobile/` changes to `main`, and on a PR after approving it in **Review deployments** in the PR checks.
 
 ## iOS
 
