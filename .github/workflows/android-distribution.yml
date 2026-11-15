@@ -13,12 +13,16 @@ on:
       - "mobile/**"
       - "!mobile/**/*.md"
       - ".github/workflows/android-distribution.yml"
+      - ".github/actions/setup-mobile/**"
+      - ".github/actions/setup-android/**"
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
       - "mobile/**"
       - "!mobile/**/*.md"
       - ".github/workflows/android-distribution.yml"
+      - ".github/actions/setup-mobile/**"
+      - ".github/actions/setup-android/**"
   workflow_dispatch:
 
 permissions:
@@ -44,24 +48,9 @@ jobs:
           # On PRs, build the branch itself, not the default merge preview with main
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
-      - uses: actions/setup-node@v4
+      - uses: ./.github/actions/setup-android
         with:
-          node-version-file: .tool-versions
-          cache: npm
-          cache-dependency-path: mobile/package-lock.json
-
-      # setup-java can't read asdf's `openjdk-17.0.2` from .tool-versions, so the major version is pinned here.
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 17
-
-      - uses: gradle/actions/setup-gradle@v4
-
-      - run: npm ci
-
-      # Native folders are generated from app.json (Continuous Native Generation).
-      - run: npx expo prebuild --platform android --clean
+          prebuild-args: --clean
 
       # Release build embeds the JS bundle, so testers don't need Metro.
       # Signed with the template's debug.keystore, which is fine for internal testing only.

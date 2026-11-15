@@ -20,7 +20,7 @@ jobs:
     name: Detect mobile changes
     runs-on: ubuntu-latest
     outputs:
-      mobile: ${{ steps.filter.outputs.mobile == 'true' || steps.filter.outputs.workflow == 'true' }}
+      mobile: ${{ steps.filter.outputs.mobile == 'true' || steps.filter.outputs.workflow == 'true' || steps.filter.outputs.actions == 'true' }}
     steps:
       # No checkout needed: on pull_request the filter reads changed files from the API.
       - id: filter
@@ -36,6 +36,9 @@ jobs:
               - '!**/*.md'
             workflow:
               - '.github/workflows/mobile-ci.yml'
+            # One pattern per filter: with 'every', two patterns would have to match the same file.
+            actions:
+              - '.github/actions/{setup-mobile,setup-android}/**'
 
   checks:
     name: Lint, format and types
@@ -47,12 +50,7 @@ jobs:
         working-directory: mobile
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: .tool-versions
-          cache: npm
-          cache-dependency-path: mobile/package-lock.json
-      - run: npm ci
+      - uses: ./.github/actions/setup-mobile
       - run: npm run lint
       - run: npm run format:check
       - run: npm run typecheck
@@ -67,19 +65,9 @@ jobs:
         working-directory: mobile
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: ./.github/actions/setup-android
         with:
-          node-version-file: .tool-versions
-          cache: npm
-          cache-dependency-path: mobile/package-lock.json
-      - run: npm ci
-      # Native folders are generated from app.json (Continuous Native Generation).
-      - run: npx expo prebuild --platform android --no-install
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 17
-      - uses: gradle/actions/setup-gradle@v4
+          prebuild-args: --no-install
       - working-directory: mobile/android
         run: ./gradlew assembleDebug
 
@@ -95,15 +83,10 @@ jobs:
         working-directory: mobile
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: .tool-versions
-          cache: npm
-          cache-dependency-path: mobile/package-lock.json
       - uses: maxim-lobanov/setup-xcode@v1
         with:
           xcode-version: latest-stable
-      - run: npm ci
+      - uses: ./.github/actions/setup-mobile
       - run: npx expo prebuild --platform ios --no-install
       - uses: actions/cache@v4
         with:
