@@ -31,6 +31,10 @@ We also want to enrich the app with cool gesture-based features and haptic feedb
   <img src="docs/images/latajaca-polatucha.jpg" alt="AirMouse demo" width="50%">
 </p>
 
+## Download
+
+The desktop app for macOS is available on [GitHub Releases](https://github.com/Jeremylaby/AirMouse/releases) (`desktop-v*` releases). See [desktop installation](desktop/README.md#installing-without-go) for how to run it.
+
 ## Project variants
 
 ### Variant minimum

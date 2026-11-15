@@ -1,0 +1,40 @@
+name: Build desktop
+description: Set up Go and build the desktop binary for the current runner OS
+
+inputs:
+  version:
+    description: Version embedded in the binary (main.version)
+    default: dev
+
+outputs:
+  binary:
+    description: Path to the built binary, relative to desktop/
+    value: ${{ steps.build-mac.outputs.binary }}
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-go@v5
+      with:
+        go-version-file: desktop/go.mod
+        cache-dependency-path: desktop/go.sum
+
+    # Universal binary (Apple Silicon + Intel)
+    - id: build-mac
+      if: runner.os == 'macOS'
+      shell: bash
+      working-directory: desktop
+      env:
+        CGO_ENABLED: "1"
+        # Without this the binary requires the runner macOS version. Cgo flags, unlike MACOSX_DEPLOYMENT_TARGET, are part of the Go build cache key.
+        CGO_CFLAGS: "-O2 -g -mmacosx-version-min=13.0"
+        CGO_LDFLAGS: "-O2 -g -mmacosx-version-min=13.0"
+        APP_VERSION: ${{ inputs.version }}
+      run: |
+        LDFLAGS="-s -w -X main.version=$APP_VERSION"
+        GOARCH=arm64 go build -ldflags "$LDFLAGS" -o airmouse-arm64 ./cmd/airmouse
+        GOARCH=amd64 go build -ldflags "$LDFLAGS" -o airmouse-amd64 ./cmd/airmouse
+        lipo -create -output airmouse airmouse-arm64 airmouse-amd64
+        lipo -info airmouse
+        vtool -show-build airmouse | grep minos
+        echo "binary=airmouse" >> "$GITHUB_OUTPUT"
