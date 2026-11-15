@@ -8,8 +8,11 @@ import (
 	"time"
 )
 
+// Set at build time with -ldflags "-X main.version=..."; local builds stay "dev".
+var version = "dev"
+
 func main() {
-	fmt.Println("Hello, AirMouse!")
+	fmt.Println("Hello, AirMouse!", version)
 
 	server := server.New()
 	server.Start()
