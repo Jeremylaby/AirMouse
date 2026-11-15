@@ -1,0 +1,105 @@
+name: Desktop – GitHub Release
+
+on:
+  push:
+    tags: ["desktop-v[0-9]+.[0-9]+.[0-9]+*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release, e.g. 0.2.0"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  version:
+    name: Resolve version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+      # Input passed via env, so it can't inject shell code.
+      - id: version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            VERSION="${INPUT_VERSION#v}"
+          else
+            VERSION="${GITHUB_REF_NAME#desktop-v}"
+          fi
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]; then
+            echo "::error::Invalid version '$VERSION', expected e.g. 0.2.0"
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=desktop-v$VERSION" >> "$GITHUB_OUTPUT"
+
+      # Otherwise the release would silently point to an old commit, not the selected branch
+      - name: Check tag
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$TAG" > /dev/null 2>&1; then
+            echo "::error::Tag $TAG already exists"
+            exit 1
+          fi
+
+  build:
+    name: Build (${{ matrix.platform }})
+    needs: version
+    strategy:
+      matrix:
+        include:
+          - os: macos-26
+            platform: macos
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+        working-directory: desktop
+    env:
+      ZIP_NAME: airmouse-desktop-${{ needs.version.outputs.version }}-${{ matrix.platform }}.zip
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: build
+        uses: ./.github/actions/build-desktop
+        with:
+          version: ${{ needs.version.outputs.version }}
+
+      - name: Package
+        env:
+          BINARY: ${{ steps.build.outputs.binary }}
+        run: zip "$ZIP_NAME" "$BINARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.platform }}
+          path: desktop/${{ env.ZIP_NAME }}
+          if-no-files-found: error
+
+  release:
+    name: Create release
+    needs: [version, build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ needs.version.outputs.tag }}
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          gh release create "$TAG" dist/*.zip \
+            --target "$GITHUB_SHA" \
+            --title "AirMouse Desktop $VERSION" \
+            --generate-notes
