@@ -43,7 +43,7 @@ jobs:
         working-directory: mobile
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           # On PRs, build the branch itself, not the default merge preview with main
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
