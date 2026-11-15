@@ -1,0 +1,27 @@
+name: Setup Android
+description: Install mobile dependencies, generate mobile/android and set up Java and Gradle
+
+inputs:
+  prebuild-args:
+    description: Extra arguments for expo prebuild, e.g. --clean
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - uses: ./.github/actions/setup-mobile
+
+    # Native folders are generated from app.json (Continuous Native Generation).
+    - run: npx expo prebuild --platform android $PREBUILD_ARGS
+      shell: bash
+      working-directory: mobile
+      env:
+        PREBUILD_ARGS: ${{ inputs.prebuild-args }}
+
+    # setup-java can't read asdf's `openjdk-17.0.2` from .tool-versions, so the major version is pinned here.
+    - uses: actions/setup-java@v5
+      with:
+        distribution: temurin
+        java-version: 17
+
+    - uses: gradle/actions/setup-gradle@v5
