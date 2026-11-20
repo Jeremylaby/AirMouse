@@ -13,6 +13,7 @@ var version = "dev"
 
 func main() {
 	fmt.Println("Hello, AirMouse!", version)
+	// test
 
 	server := server.New()
 	server.Start()
